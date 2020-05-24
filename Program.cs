@@ -2,489 +2,522 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace _04_Blackjack
+namespace BlackJackPractice
 {
-    class Program
+
+    class program
     {
-        //---------------------------------------------------
-        // DEAL PHASE
 
-        // Shuffles the deck
-        public static void Shuffle()
+        // Selects the primary hand of a player
+        public static Hand MainHand(Player player)
         {
-            // Performs the Fisher-Yates shuffle
-            for (var firstIndex = Cards.deck.Count - 1; firstIndex >= 0; firstIndex--)
-            {
-                var randomNumber = new Random();
-                var secondIndex = randomNumber.Next(0, firstIndex);
-                var swapCards = Cards.deck[firstIndex];
-
-                Cards.deck[firstIndex] = Cards.deck[secondIndex];
-                Cards.deck[secondIndex] = swapCards;
-            }
-            PressAnyKeyPrompt("Press any key to start...");
+            return player.Hands[0];
         }
 
-        // Deals the top two cards to the player and computer
-        public static void Deal()
+        // Displays all of the player's cards on the console. Reactive to when a player splits or busts. 
+        public static void ShowPlayerCards(List<Player> listOfPlayers)
         {
-            // Function
-            Players.playerHand.Add(Cards.deck[0]);
-            Cards.deck.Remove(Cards.deck[0]);
-            Players.playerHand.Add(Cards.deck[0]);
-            Cards.deck.Remove(Cards.deck[0]);
-            Players.computerHand.Add(Cards.deck[0]);
-            Cards.deck.Remove(Cards.deck[0]);
-            Players.computerHand.Add(Cards.deck[0]);
-            Cards.deck.Remove(Cards.deck[0]);
-
-            // Console
-            Console.Clear();
-            DisplayMessage("Cards have been dealt. Look at your hand below...");
-            DisplayPhase("Player Phase");
-            DisplayHandStatus();
-            PressAnyKeyPrompt("Press any key to continue");
-        }
-
-        // PLAYER PHASE --------------------------------------------------||
-
-        // Prompts the player with the Hit/Stand loop
-        public static void PlayerPhase()
-        {
-            var goodResponse = false;
-
-            // Loops the player phase of the game until they stand or bust
-            while (!goodResponse)
+            foreach (var player in listOfPlayers)
             {
-                // Player busts after hit and value is greater than 21
-                // Bust is declared first to prevent the Hit/Stand prompt to show when a player busts
-                int playerHandAmount = Players.playerHand.Sum(item => item.Value());
-                bool bust = playerHandAmount > 21;
-                if (bust)
+                Console.WriteLine($"\n{player.Name}:\n");
+
+                if (player.Hands.All(hand => hand.HandValueSum(player) > 21))
                 {
-                    PlayerBust();
-                    break;
+                    Console.WriteLine("!!BUSTED!!");
                 }
 
-                // Console
-                Console.Clear();
-                DisplayMessage("Would you like to hit or stand?");
-                DisplayPhase("Player Phase");
-                DisplayHandStatus();
-                Console.Write("\nPress \'H\' to hit, \'S\' to Stand: ");
-                var input = Console.ReadKey();
-                // booleans for a good input for the prompt
-                bool hit = input.KeyChar == 'h';
-                bool stand = input.KeyChar == 's';
-                bool invalidAnswer = input.KeyChar != 'h' || input.KeyChar != 's';
-
-
-                // Player hits to receive a card in their hand
-                if (hit)
+                foreach (var hand in player.Hands)
                 {
-                    PlayerHit();
+
+                    if (player.Hands.Count() == 1)
+                    {
+                        Console.WriteLine($"Hand:");
+                    }
+
+                    if (player.Hands.Count() == 2)
+                    {
+                        Console.WriteLine($"Hand (split):");
+                    }
+
+                    foreach (var card in hand.CardsInHand)
+                    {
+                        Console.WriteLine($"{card.Face} of {card.Suit}");
+                        // Console.WriteLine($"Press any key ----------------");
+                        // Console.ReadKey();
+
+                    }
+
+                    Console.WriteLine($"Hand value: {hand.HandValueSum(player)}");
+                    Console.WriteLine();
                 }
-                // Player stands to maintain the value in their posession.
-                if (stand)
-                {
-                    PlayerStand();
-                    goodResponse = true;
-                }
-                // Player enters an invalid input
-                if (!goodResponse && !hit)
-                {
-                    Console.WriteLine("\n{0} is not a valid answer", input.KeyChar);
-                }
+
+                Console.WriteLine($"\nBet: {player.BetPoints}");
+                Console.WriteLine($"Points Left: {player.Points}");
+                Console.WriteLine($"\n--------------------------------");
             }
         }
 
-        // Adds a card to a players hand when the player selects 'hit' during Player Phase
-        public static void PlayerHit()
+        // Shows the dealer's hand where the first card is hidden
+        public static void ShowDealerHiddenHand(Player dealer)
         {
-            // Consoled before the function to show the card before it is removed from the deck
-            Console.Clear();
-            DisplayMessage($"You drew a {DisplayDrawnCard()}");
+            Console.WriteLine($"\n{dealer.Name}'s hand:\n");
 
-            // Function
-            Players.playerHand.Add(Cards.deck[0]);
-            Cards.deck.Remove(Cards.deck[0]);
+            Console.WriteLine($"???? of ????");
+            Console.WriteLine($"{MainHand(dealer).CardsInHand[1].Face} of {MainHand(dealer).CardsInHand[1].Suit}");
 
-            // Console 
-            DisplayPhase("Player Phase");
-            DisplayHandStatus();
-            PressAnyKeyPrompt("Press any key to continue...");
+            Console.WriteLine($"\n--------------------------------");
         }
 
-        // Prints the command when the player selects 'stand' during the PlayerPhase
-        public static void PlayerStand()
+        // Shows the dealer's hand where both cards are revealed
+        public static void ShowDealerRevealedHand(Player dealer)
         {
-            // Console
-            Console.Clear();
-            DisplayMessage("You chose to stand. It's now the computer's turn");
-            DisplayPhase("Player Phase END");
-            DisplayHandStatus();
-            PressAnyKeyPrompt("Press any key to continue...");
+            Console.WriteLine($"\n{dealer.Name}'s hand:\n");
+
+            Console.WriteLine($"{MainHand(dealer).CardsInHand[0].Face} of {MainHand(dealer).CardsInHand[0].Suit}");
+            Console.WriteLine($"{MainHand(dealer).CardsInHand[0].Face} of {MainHand(dealer).CardsInHand[0].Suit}");
+
+            Console.WriteLine($"\n--------------------------------");
         }
 
-        // COMPUTER PHASE ---------------------------------------------------||
-
-        // Takes the algorithm for how the computer will make decisions.
-        public static void ComputerPhase()
+        // Returns the cards in the format of a string
+        public static string CardAsString(Card card)
         {
-            Console.Clear();
-
-            bool computerBust = false;
-            bool computerStand = false;
-
-            // Loops the computer to make a decision between Hit and Stand.
-
-            while (!computerBust || !computerStand)
-            {
-                if (CalculateComputerValueSum() <= 17)
-                {
-                    ComputerHit();
-                }
-                if (CalculateComputerValueSum() > 17 && CalculateComputerValueSum() <= 21)
-                {
-                    ComputerStand();
-                    computerStand = true;
-                    break;
-                }
-                if (CalculateComputerValueSum() > 21)
-                {
-                    ComputerBust();
-                    computerBust = true;
-                    break;
-                }
-            }
+            return $"{card.Face} of {card.Suit}";
         }
 
-        // Adds a card to a computer's hand
-        public static void ComputerHit()
+        // Prompts the user to press a key and returns the input
+        public static char PressAKeyPrompt(string prompt)
         {
-            // Function
-            Players.computerHand.Add(Cards.deck[0]);
-            Cards.deck.Remove(Cards.deck[0]);
+            Console.WriteLine(prompt);
 
-            // Console
-            Console.Clear();
-            DisplayMessage("Computer decided to hit");
-            DisplayPhase("Computer Phase");
-            DisplayHandStatus();
-            PressAnyKeyPrompt("Press any key to continue...");
+            var input = Console.ReadKey().KeyChar;
+
+            return input;
         }
 
-        // Prints the command when the Computer decides to stand
-        public static void ComputerStand()
-        {
-            Console.Clear();
-            DisplayMessage("Computer decided to stand");
-            DisplayPhase("Computer Phase");
-            DisplayHandStatus();
-            PressAnyKeyPrompt("Press any key to continue...");
-        }
-
-        // ENDING PHASE ---------------------------------------------------||
-
-        //Begins the ending phase of the game.
-        public static void EndingPhase()
-        {
-            //Console 1
-            Console.Clear();
-            DisplayMessage("Time to reveal the computer's hand...");
-            DisplayPhase("WHO WON?");
-            DisplayHandStatus();
-            PressAnyKeyPrompt("Press any key to reveal...");
-
-            // Console 2
-            Console.Clear();
-            DisplayMessage("Here is the computer's hand...");
-            DisplayPhase("WHO WON?");
-            DisplayRevealedHandStatus();
-            PressAnyKeyPrompt("Press any key to continue...");
-        }
-
-        // Calculate the value difference to determine who wins.
-        public static void CalculateResults()
-        {
-            int playerValueDifference = 21 - CalculatePlayerValueSum();
-            int computerValueDifference = 21 - CalculateComputerValueSum();
-            if (CalculatePlayerValueSum() == 21 && CalculateComputerValueSum() != 21)
-            {
-                PlayerWin();
-            }
-            if (CalculatePlayerValueSum() != 21 && CalculateComputerValueSum() == 21)
-            {
-                PlayerLose();
-            }
-            if (playerValueDifference < computerValueDifference)
-            {
-                PlayerWin();
-            }
-            if (playerValueDifference > computerValueDifference)
-            {
-                PlayerLose();
-            }
-            if (playerValueDifference == computerValueDifference)
-            {
-                Draw();
-            }
-        }
-
-        // Prompts the player that they busted
-        public static void PlayerBust()
-        {
-            // Console 1
-            Console.Clear();
-            DisplayMessage("oh oh..!?");
-            DisplayPhase("SOMEONE BUSTED");
-            DisplayRevealedHandStatus();
-            PressAnyKeyPrompt("Press any key to continue...");
-
-            // Console 2
-            Console.Clear();
-            Console.WriteLine("\n\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!YOU BUSTED!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!YOU LOSE!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            PressAnyKeyPrompt("Press any key to try again...");
-
-            // Restarts the application
-            RestartApplication();
-        }
-
-        // Prompts the player that the computer busted
-        public static void ComputerBust()
-        {
-            // Console 1
-            Console.Clear();
-            DisplayMessage("oh oh..!?");
-            DisplayPhase("SOMEONE BUSTED");
-            DisplayRevealedHandStatus();
-            PressAnyKeyPrompt("Press any key to continue...");
-
-            // Console 2
-            Console.Clear();
-            Console.WriteLine("\n\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!YOUR OPPONENT BUSTED!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!YOU WIN!!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            PressAnyKeyPrompt("Press any key to try again...");
-
-            // Restarts the application
-            RestartApplication();
-        }
-
-        // Prompts the player that they won
-        public static void PlayerWin()
-        {
-            // Console
-            Console.Clear();
-            Console.WriteLine("\n\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!YOU WIN!!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            PressAnyKeyPrompt("Press any key to try again...");
-
-            //Restarts the application
-            RestartApplication();
-        }
-
-        // Prompts the player they lost
-        public static void PlayerLose()
-        {
-            // Console
-            Console.Clear();
-            Console.WriteLine("\n\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!YOU LOSE!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            PressAnyKeyPrompt("Press any key to try again...");
-
-            // Restarts the application
-            RestartApplication();
-        }
-
-        //Prompts the player that it was a draw
-        public static void Draw()
-        {
-            // Console
-            Console.Clear();
-            Console.WriteLine("\n\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!IT'S A DRAW!!!!!!!!!!!");
-            Console.WriteLine("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            PressAnyKeyPrompt("Press any key to try again...");
-
-            //Restarts the application
-            RestartApplication();
-        }
-
-        // DISPLAY METHODS ---------------------------------------------------||
-
-        //Returns the drawn card from the deck as a string in the format "4 of Spades"
-        public static string DisplayDrawnCard()
-        {
-            return $"{Cards.getDeckRank(0)} of {Cards.getDeckSuit(0)}";
-        }
-
-        // Returns a card from the player's hand as a string in the format "4 of Spades"
-        public static string DisplayPlayerCard(int playerHandIndex)
-        {
-            var rank = Players.playerHand[playerHandIndex].Rank;
-            var suit = Players.playerHand[playerHandIndex].Suit;
-            return rank + " of " + suit;
-        }
-
-        // Returns a card from the computer's hand as a string in the format "4 of Spades"
-        public static string DisplayComputerCard(int computerHandIndex)
-        {
-            var rank = Players.computerHand[computerHandIndex].Rank;
-            var suit = Players.computerHand[computerHandIndex].Suit;
-            return rank + " of " + suit;
-        }
-
-
-
-        // Prints all of the player's card in their hand into the console.
-        public static void DisplayAllPlayerCards()
-        {
-            Console.WriteLine("Your hand:");
-            for (var i = 0; i < Players.playerHand.Count; i++)
-            {
-                var rank = Players.playerHand[i].Rank;
-                var suit = Players.playerHand[i].Suit;
-                Console.WriteLine($"{rank} of {suit}");
-            }
-        }
-
-        // Prints all of the computer's card in their hand into the console.
-        public static void DisplayAllComputerCards()
-        {
-            Console.WriteLine("Their hand:");
-            for (var i = 0; i < Players.computerHand.Count; i++)
-            {
-
-                var rank = Players.computerHand[i].Rank;
-                var suit = Players.computerHand[i].Suit;
-                Console.WriteLine($"{rank} of {suit}");
-            }
-        }
-
-        // Prints all of the computer's card in their hand as a ????? into the console
-        public static void DisplayAllHiddenComputerCards()
-        {
-            Console.WriteLine("Their hand:");
-            for (var i = 0; i < Players.computerHand.Count; i++)
-            {
-                var rank = Players.computerHand[i].Rank;
-                var suit = Players.computerHand[i].Suit;
-                rank = "?????";
-                suit = "?????";
-
-                Console.WriteLine($"{rank} of {suit}");
-            }
-        }
-
-        // Prints the total value in the player's hand
-        public static void DisplayPlayerValueSum()
-        {
-            int playerHandAmount;
-            playerHandAmount = Players.playerHand.Sum(item => item.Value());
-            Console.WriteLine($"Player's hand is valued: {playerHandAmount}");
-        }
-
-        // Prints the total value in the computer's hand
-        public static void DisplayComputerValueSum()
-        {
-            int computerHandAmount;
-            computerHandAmount = Players.computerHand.Sum(item => item.Value());
-            Console.WriteLine($"Computer's hand is valued: {computerHandAmount}");
-        }
-
-        // Displays the main message into the console
-        public static void DisplayMessage(string prompt)
-        {
-            Console.Write($"\n\n\n{prompt}");
-        }
-
-        // Displays the phase into the console
-        public static void DisplayPhase(string prompt)
-        {
-            Console.Write($"\n\n\n<><><><><>{prompt}<><><><><>\n\n\n");
-        }
-
-        //Displays both the player's hand and computer's hidden hand into the console
-        public static void DisplayHandStatus()
-        {
-            DisplayAllPlayerCards();
-            Console.WriteLine($"\n\n================\n\n");
-            DisplayAllHiddenComputerCards();
-        }
-
-        //Displays both the player's hand and computer's hand into the console
-        public static void DisplayRevealedHandStatus()
-        {
-            DisplayAllPlayerCards();
-            Console.WriteLine($"\n\n================\n\n");
-            DisplayAllComputerCards();
-        }
-
-        // Displays the "Press any key" prompt into the console
+        // Prompts the user to press any key to continue
         public static void PressAnyKeyPrompt(string prompt)
         {
-            Console.Write($"\n{prompt}");
+            Console.WriteLine(prompt);
             Console.ReadKey();
         }
 
-        // Return a integer of the total value in the player's hand
-        public static int CalculatePlayerValueSum()
+        // Method for when the game is tied
+        public static void Tie(List<Player> players)
         {
-            int playerHandAmount = Players.playerHand.Sum(item => item.Value());
-            return playerHandAmount;
+            // Returns bet points to total points
+            foreach (var player in players)
+            {
+                player.Points += player.BetPoints;
+                player.BetPoints = 0;
+            }
+
+            PressAnyKeyPrompt($"The game resulted in a push by {players.First(player => MainHand(player).HandValueSum(player) == 21)}. Press any key to try again.");
+            RestartApplication();
         }
 
-        // Returns a integer of the total value in the computer's hand
-        public static int CalculateComputerValueSum()
+        // Method for when the dealer wins the game
+        public static void DealerWin(List<Player> players)
         {
-            int computerHandAmount = Players.computerHand.Sum(item => item.Value());
-            return computerHandAmount;
+            // Bet points are set to 0
+            foreach (var player in players)
+            {
+                player.BetPoints = 0;
+            }
+
+            PressAnyKeyPrompt("Dealer wins with a BlackJack. You have lost your bets. Press any key to try again.");
+            RestartApplication();
         }
 
-        // Clears the player and computer hands and restarts the application.
+        // Restarts the application when the game is finished
         public static void RestartApplication()
         {
-            Players.playerHand.Clear();
-            Players.computerHand.Clear();
             Console.Clear();
             Main(null);
         }
 
-        // MAIN ---------------------------------------------------
-        public static void Main(string[] args)
+
+        static void Main(string[] args)
         {
-            // List of rank and suit to combine
-            var rank = new List<string>() { "Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King" };
-            var suit = new List<string>() { "Hearts", "Diamonds", "Spades", "Clubs" };
-
-            // Variable to add combined rank and suit as a card
-            var card = new Cards();
-
-            // Creates every combination of ranks and suits
-            foreach (var selectedRank in rank)
+            // Create dummy players and dealer
+            var players = new List<Player>();
+            var dealer = new Player
             {
-                foreach (var selectedSuit in suit)
+                Name = "Dealer",
+            };
+            var playerOne = new Player
+            {
+                Name = "Kento",
+                Points = 100
+            };
+            var playerTwo = new Player
+            {
+                Name = "Dakota",
+                Points = 100
+            };
+            var playerThree = new Player
+            {
+                Name = "Joe",
+                Points = 100
+            };
+            var playerFour = new Player
+            {
+                Name = "Dummy",
+                Points = 50
+            };
+
+            // Adds created player to list of players
+
+
+            players.Add(playerFour);
+            players.Add(playerOne);
+            players.Add(playerTwo);
+            players.Add(playerThree);
+
+
+            // Create a shuffled deck
+            var deck = new Deck();
+            deck.MakeCards();
+            deck.ShuffleCards();
+
+            // Clears the console before starting
+            Console.Clear();
+
+
+            // Initial Phase -------------------------------------------------------------------
+
+            // Each players bet points
+            foreach (var player in players)
+            {
+                player.Bet();
+                PressAnyKeyPrompt("Press any key to continue...");
+                Console.Clear();
+            }
+
+            // ----------------------------------------------------
+
+            // House deals cards to each players
+            // foreach (var player in players)
+            // {
+            //     player.MakeHand(player);
+            //     MainHand(player).AddCard(deck.Deal(player));
+            //     MainHand(player).AddCard(deck.Deal(player));
+            // }
+
+            // For testing - replaced the code above
+            // This one does not make a hand or deal cards to the dummy player
+            for (var playerIndex = 1; playerIndex < 4; playerIndex++)
+            {
+                var selectedPlayer = players[playerIndex];
+
+                selectedPlayer.MakeHand(selectedPlayer);
+
+                MainHand(selectedPlayer).AddCard(deck.Deal());
+                MainHand(selectedPlayer).AddCard(deck.Deal());
+            }
+
+            players[0].MakeDummyHand();
+
+            // ----------------------------------------------------
+
+            // Make a hand for dealer
+            dealer.MakeHand(dealer);
+
+            // Cards dealt to dealer
+            MainHand(dealer).AddCard(deck.Deal());
+            MainHand(dealer).AddCard(deck.Deal());
+
+            // Showing each player's hand
+            ShowPlayerCards(players);
+            PressAnyKeyPrompt("Press any key to see Dealer's hand...");
+            Console.Clear();
+
+
+            //Show dealer's hand (only one face up)
+            ShowDealerHiddenHand(dealer);
+            PressAnyKeyPrompt("Press any key to enter player phase...");
+            Console.Clear();
+
+            // If dealer's shown card is an Ace, 10, Jack, Queen, or King, the dealer can reveal if it has a blackjack (21).
+            // If the dealer has a blackjack and all players do not have a black jack, the player loses their bet and the dealer wins.
+
+            var dealerRevealedCardInHand = dealer.Hands[0].CardsInHand[1];
+            bool dealerHasBlackJack = MainHand(dealer).HandValueSum(dealer) == 21;
+            bool dealerHasAnAceOrTenOnRevealedHand = dealerRevealedCardInHand.Suit == "Ace" || dealerRevealedCardInHand.Suit == "10" || dealerRevealedCardInHand.Suit == "Jack" || dealerRevealedCardInHand.Suit == "Queen" || dealerRevealedCardInHand.Suit == "King";
+            bool ifAnyPlayersHasBlackJack = players.Any(player => MainHand(player).HandValueSum(player) == 21);
+
+            if (dealerHasAnAceOrTenOnRevealedHand)
+            {
+                //If dealer has a black jack results in a dealer win unless a player also has a black jack resulting in a push(tie).
+                if (dealerHasBlackJack)
                 {
-                    card.addToDeck(selectedRank, selectedSuit);
+                    ShowDealerRevealedHand(dealer);
+
+                    if (ifAnyPlayersHasBlackJack)
+                    {
+                        Tie(players);
+                    }
+                    else
+                    {
+                        DealerWin(players);
+                    }
                 }
             }
 
-            // Calling methods for each phases
-            Shuffle();
-            Deal();
-            PlayerPhase();
-            ComputerPhase();
-            EndingPhase();
-            CalculateResults();
+            // Player phase -------------------------------------------------------------------
+            else
+            {
+                // Cycles through each players in the player phase
+                foreach (var player in players)
+                {
+                    bool standOrBust = false;
+
+                    while (!standOrBust)
+                    {
+                        // Clears the console, updates it with new set of hands
+                        Console.Clear();
+                        ShowDealerHiddenHand(dealer);
+                        ShowPlayerCards(players);
+
+                        // Shows who's turn it is
+                        Console.WriteLine($"It's {player.Name}'s turn");
+
+                        // Prompts the player with their options
+                        var input = PressAKeyPrompt("Press H to hit | Press S to stand | Press / to split | Press d to double | Press - to surrender");
+                        bool goodInput = "hs/d-".Contains(input);
+
+                        // Conditions for certain options
+                        bool enoughPoints = player.BetPoints <= player.Points && player.Points > 1;
+                        bool canSplitHand = MainHand(player).CardsInHand[0].Face == MainHand(player).CardsInHand[1].Face;
+
+                        // Hit
+                        if (input == 'h')
+                        {
+                            Console.WriteLine($"\n{player.Name} has been dealt a {CardAsString(Deck.Cards[0])}\n");
+
+                            player.Hands[0].AddCard(deck.Deal());
+
+                            PressAnyKeyPrompt("Press any key to continue");
+                        }
+
+                        // Stand
+                        if (input == 's')
+                        {
+                            PressAnyKeyPrompt("\nYou chose to stand. Press any key to continue");
+                            standOrBust = true;
+                        }
+
+                        // Split
+                        if (input == '/' && canSplitHand == true && enoughPoints == true)
+                        {
+                            player.SplitHand(player);
+
+                            foreach (var hand in player.Hands)
+                            {
+                                hand.AddCard(deck.Deal());
+                            }
+                        }
+
+                        // Split - no matching cards
+                        if (input == '/' && canSplitHand == false)
+                        {
+                            PressAnyKeyPrompt("You do not have any matching cards! You cannot split this round.\nPress any key to continue...");
+                        }
+
+                        // Split - not enough points
+                        if (input == '/' && canSplitHand == true && enoughPoints == false)
+                        {
+                            PressAnyKeyPrompt("You do not have enough points to do a split.\nPress any key to continue...");
+                        }
+
+                        // Hit after splitting
+                        if (player.Hands.Count() > 1)
+                        {
+                            // Runs through the options on each split hand
+                            for (var hand = player.Hands.Count() - 1; hand >= 0; hand--)
+                            {
+                                bool splitHitting = true;
+                                enoughPoints = player.BetPoints <= player.Points && player.Points > 0;
+
+                                // prompts the user with options for each hand
+                                while (splitHitting)
+                                {
+                                    // clears the console and displays updated hands
+                                    Console.Clear();
+                                    ShowDealerHiddenHand(dealer);
+                                    ShowPlayerCards(players);
+
+                                    // Shows the selected player's turn
+                                    Console.WriteLine($"It's {player.Name}'s turn");
+
+                                    // Prompts the user with the options
+                                    var anotherInput = PressAKeyPrompt($"Hand #{hand + 1}\nPress H to hit | Press D to double down | Press S to stand");
+                                    var anotherGoodInput = "hds".Contains(anotherInput);
+
+                                    // Hit on a split
+                                    if (anotherInput == 'h')
+                                    {
+                                        Console.WriteLine($"\n{player.Name} has been dealt a {CardAsString(Deck.Cards[0])}\n");
+
+                                        player.Hands[hand].AddCard(deck.Deal());
+
+                                        // Ending prompt
+                                        PressAnyKeyPrompt("Press any key to continue");
+                                    }
+
+                                    // Double on a split
+                                    if (anotherInput == 'd' && enoughPoints == true)
+                                    {
+                                        // Doubles the player's bet
+                                        player.DoubleBet();
+
+                                        // Deals one card to the hand
+                                        player.Hands[hand].AddCard(deck.Deal());
+
+                                        // Ending prompt
+                                        PressAnyKeyPrompt("Press any key to continue...");
+                                        hand -= 1;
+                                        splitHitting = false;
+                                    }
+
+                                    // Double on split - not enough points
+                                    if (anotherInput == 'd' && enoughPoints == false)
+                                    {
+                                        PressAnyKeyPrompt("You do not have enough points to double your bet.\nPress any key to continue...");
+                                    }
+
+                                    // Stand on split
+                                    if (anotherInput == 's')
+                                    {
+                                        PressAnyKeyPrompt("\nYou chose to stand. Press any key to continue");
+
+                                        hand -= 1;
+                                        splitHitting = false;
+                                    }
+
+                                    // Invalid input
+                                    if (anotherGoodInput == false)
+                                    {
+                                        Console.WriteLine("Invalid Input!");
+                                    }
+
+                                    // Bust
+                                    if (player.Hands.Any(hand => hand.HandValueSum(player) > 21))
+                                    {
+                                        // Bust on one hand to hit on the second
+                                        player.BustOneHand(player);
+
+                                        // Ending prompt
+                                        PressAnyKeyPrompt($"Press any key to continue...");
+
+                                        hand -= 1;
+                                        splitHitting = false;
+                                    }
+                                }
+
+                                // Ends the player's turn skipping the initial hitting phase below VVV
+                                standOrBust = true;
+                            }
+                        }
+
+                        // Double
+                        if (input == 'd' && enoughPoints == true)
+                        {
+                            // Doubles the bet
+                            player.DoubleBet();
+
+                            // Deals one card
+                            MainHand(player).AddCard(deck.Deal());
+
+                            // Ending prompt
+                            PressAnyKeyPrompt("Press any key to continue...");
+                            standOrBust = true;
+                        }
+
+                        // Double - not enough points
+                        if (input == 'd' && enoughPoints == false)
+                        {
+                            PressAnyKeyPrompt("You do not have enough points to double your bet.\nPress any key to continue...");
+                        }
+
+                        // Surrender
+                        if (input == '-')
+                        {
+                            // Player receives half the bet points back
+                            player.Surrender(player);
+
+                            // Ending prompt
+                            PressAnyKeyPrompt($"Press any key to continue...");
+                            standOrBust = true;
+                        }
+
+                        // Invalid input
+                        if (!goodInput)
+                        {
+                            PressAnyKeyPrompt("invalid input! \nPress any key to continue...");
+                        }
+
+                        // Bust
+                        if (player.Hands.All(hand => hand.HandValueSum(player) > 21))
+                        {
+                            // Player bust, losing all of their bet points
+                            player.Bust(player);
+
+                            PressAnyKeyPrompt($"Press any key to continue...");
+                            standOrBust = true;
+                        }
+
+                    }
+
+                    // Clears the console before the next player starts the loop again
+                    Console.Clear();
+                    PressAnyKeyPrompt("Next player!");
+                }
+            }
+
+            // Player
+            //  Properties:
+            //  Hand - List of cards
+            //  Money - Integer
+            //  
+            //  Methods:
+            //  Bet
+            //  Be Dealt
+            //  Calculate the value of its hand
+            //  Show its hand
+            //  Hit
+            //  Stand
+            //  Bust
+            //  Split
+            //  Double
+            //  Surrender
+            //  Add their money
+            //  Subtract their money
+            //  Win
+            //  Lose
+
+            // Dealer
+            //  Properties:
+            //  Hand - List of cards
+            //  
+            //  Methods:
+            //  Be dealt
+            //  Calculate the value of its hand
+            //  Show one of the cards in its hand
+            //  Reveal its hand
+            //  Hit
+            //  Stand
+            //  Bust
+
+            // Deck
+            //  Properties:
+            //  List of cards
+            //
+            //  Methods:
+            //  Create a card
+            //  Deal a card
+            //  Shuffle cards
+
         }
     }
 }
