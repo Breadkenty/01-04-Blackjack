@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace BlackJackPractice
+namespace _04_Blackjack
 {
     class Deck
     {
