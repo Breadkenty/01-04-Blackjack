@@ -10,22 +10,38 @@ namespace BlackJackPractice
         // List of cards that are in a hand
         public List<Card> CardsInHand = new List<Card>();
 
-        // Method to accept a card into a hand
+        // Accept a card into a hand
         public void AddCard(Card cardToAdd)
         {
             CardsInHand.Add(cardToAdd);
         }
 
-        // Method to remove a card from a hand
+        // Remove a card from a hand
         public void RemoveCard(Card cardToRemove)
         {
             CardsInHand.Remove(cardToRemove);
         }
 
-        // Method to calculate the total value of all the cards in a hand (assuming that the ace is an 11)
-        public int HandValueSum(Player player)
+        // Calculate the total value of all the cards in a hand (assuming that the ace is an 11)
+        public int HandValueSum()
         {
-            return CardsInHand.Sum(cards => cards.Value(true));
+            int totalValue = 0;
+
+            foreach (var card in CardsInHand)
+            {
+                totalValue += card.Value();
+            }
+
+            // Automatically sets Ace as 11 if total hand value goes over 21
+            if (totalValue > 21 && CardsInHand.Any(card => card.Face == "Ace"))
+            {
+                foreach (var card in CardsInHand.Where(card => card.Face == "Ace"))
+                {
+                    totalValue -= 10;
+                }
+            }
+
+            return totalValue;
         }
     }
 }

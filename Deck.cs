@@ -31,7 +31,7 @@ namespace BlackJackPractice
             }
         }
 
-        // Method to shuffle the deck(Cards)
+        // Shuffle the cards in the deck
         public void ShuffleCards()
         {
             // Fisher Yates shuffle
@@ -46,7 +46,7 @@ namespace BlackJackPractice
             }
         }
 
-        // Deals a card (removes the card from list and returns the card)
+        // Removes the top card in the deck
         public Card Deal()
         {
             var topCard = Cards[0];
