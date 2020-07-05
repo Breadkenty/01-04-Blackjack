@@ -2,7 +2,7 @@
 
 <img src='demo.gif' width="350">
 
-# Assignment Overview
+# Assignment Overview:
 
 In this project, you are creating a playable game of
 [Blackjack](https://en.wikipedia.org/wiki/Blackjack). If you haven't played this
