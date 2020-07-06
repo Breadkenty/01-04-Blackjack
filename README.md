@@ -2,6 +2,25 @@
 
 <img src='demo.gif' width="350">
 
+---
+
+This console app allows you to play blackjack with multiple people. Some features that it includes:
+
+- Adding players
+- Betting points
+- Hit/Stand/Double/Split/Surrender
+- Bust
+- Dealer drawing phase (deals with dealer having `Blackjack` at the beginning of a turn allowing players to push )
+- Dealers hidden hand
+- Payouts
+- Nicely designed console app that clears after each command
+
+Some of the technology used:
+
+- Written entirely in C# on .NET
+
+This project extensively demonstrates the use of classes/methods/Iterations
+
 # Assignment Overview:
 
 In this project, you are creating a playable game of
